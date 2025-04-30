@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Florida Fire Instructor II Practice Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1, h2 { color: #2E5AAC; }
+        .question { margin-bottom: 30px; }
+        .options { margin-left: 20px; }
+        label { cursor: pointer; display: block; margin-bottom: 5px; }
+        button { margin: 20px 0; padding: 10px 20px; font-size: 16px; background-color: #2E5AAC; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .correct { color: green; font-weight: bold; }
+        .incorrect { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h1>Florida Fire Instructor II Practice Test</h1>
+
+<div id="testArea">
+  <form id="testForm">
+    <div id="formContainer"></div>
+    <button type="button" onclick="submitAnswers()">Submit</button>
+  </form>
+</div>
+
+<div id="resultsArea" style="display:none;">
+  <h2>Your Results</h2>
+  <p id="scoreDisplay"></p>
+  <div id="resultsContainer"></div>
+  <button onclick="retakeTest()">Retake Test</button>
+</div>
+
+<script>
+// Fisher–Yates shuffle
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+// Placeholder for loaded questions
+let questionData = [];
+let dynamicCorrect = {};
+
+// Load questions.json on startup
+async function loadQuestions() {
+  const res = await fetch('./questions.json');
+  if (!res.ok) throw new Error('Failed to fetch ' + res.url + ': ' + res.status + ' ' + res.statusText); 
+  questionData = await res.json();
+  renderQuestions();
+}
+window.onload = loadQuestions;
+
+// Render shuffled questions & options
+function renderQuestions() {
+  const container = document.getElementById('formContainer');
+  container.innerHTML = '';
+  dynamicCorrect = {};
+
+  // Shuffle question order
+  const questions = [...questionData];
+  shuffle(questions);
+
+  questions.forEach(q => {
+    // Prepare and shuffle options
+    const opts = Object.entries(q.options).map(([key, txt]) => ({
+      key, txt, isCorrect: key === q.correct
+    }));
+    shuffle(opts);
+
+    // Reassign letters and track the correct one
+    ['a','b','c','d'].forEach((letter, i) => {
+      opts[i].letter = letter;
+      if (opts[i].isCorrect) dynamicCorrect[q.id] = letter;
+    });
+
+    // Build question block
+    const div = document.createElement('div');
+    div.className = 'question';
+    div.innerHTML = `<p><strong>${q.text}</strong></p>`;
+    const optsDiv = document.createElement('div');
+    optsDiv.className = 'options';
+    opts.forEach(o => {
+      const label = document.createElement('label');
+      label.innerHTML = `<input type="radio" name="${q.id}" value="${o.letter}"> ${o.letter}) ${o.txt}`;
+      optsDiv.appendChild(label);
+    });
+    div.appendChild(optsDiv);
+    container.appendChild(div);
+  });
+}
+
+// Grade and show feedback
+function submitAnswers() {
+  let score = 0;
+  const resultsContainer = document.getElementById('resultsContainer');
+  resultsContainer.innerHTML = '';
+
+  questionData.forEach(q => {
+    const sel = document.querySelector(`input[name="${q.id}"]:checked`);
+    const userAns = sel ? sel.value : null;
+    const correctAns = dynamicCorrect[q.id];
+    const isCorrect = userAns === correctAns;
+    if (isCorrect) score++;
+
+    const div = document.createElement('div');
+    div.className = 'question';
+    div.innerHTML = `<p><strong>${q.text}</strong></p>`;
+    const fb = document.createElement('p');
+    if (isCorrect) {
+      fb.innerHTML = `Your answer: <span class="correct">${userAns}) ${q.options[q.correct]}</span> — Correct!`;
+    } else {
+      const usrTxt = userAns ? `${userAns}) ${q.options[q.correct]}` : 'No answer selected';
+      fb.innerHTML = `Your answer: <span class="incorrect">${usrTxt}</span><br>Correct answer: <span class="correct">${correctAns}) ${q.options[q.correct]}</span>`;
+    }
+    div.appendChild(fb);
+    resultsContainer.appendChild(div);
+  });
+
+  document.getElementById('scoreDisplay').textContent =
+    `You scored ${score} out of ${questionData.length}.`;
+
+  document.getElementById('testArea').style.display = 'none';
+  document.getElementById('resultsArea').style.display = 'block';
+}
+
+// Reset for another attempt
+function retakeTest() {
+  document.getElementById('resultsArea').style.display = 'none';
+  document.getElementById('testArea').style.display = 'block';
+  renderQuestions();
+}
+</script>
+
+</body>
+</html>

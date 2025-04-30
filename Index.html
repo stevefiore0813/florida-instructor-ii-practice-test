@@ -47,7 +47,7 @@ let dynamicCorrect = {};
 
 // Load questions.json on startup
 async function loadQuestions() {
-  const res = await fetch('./questions.json');
+  const res = await fetch('questions.json');
   if (!res.ok) throw new Error('Failed to fetch ' + res.url + ': ' + res.status + ' ' + res.statusText); 
   questionData = await res.json();
   renderQuestions();
